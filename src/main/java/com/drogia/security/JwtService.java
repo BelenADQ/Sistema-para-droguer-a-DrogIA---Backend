@@ -1,6 +1,6 @@
 package com.drogia.security;
 
-import com.drogia.entities.User;
+import com.drogia.modules.usuarios.entity.User;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import javax.crypto.SecretKey;

@@ -1,5 +1,9 @@
 package com.drogia.config;
 
+import com.drogia.modules.clientes.policy.ClientePermisos;
+import com.drogia.modules.correos.policy.CorreoPermisos;
+import com.drogia.modules.proveedores.policy.ProveedorPermisos;
+import com.drogia.modules.usuarios.policy.UsuarioPermisos;
 import com.drogia.security.JwtAuthenticationFilter;
 import com.drogia.security.JwtService;
 import java.util.List;
@@ -41,7 +45,10 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/correos/**").hasAnyRole("ADMINISTRACION", "VENTAS", "COMPRAS")
+                        .requestMatchers("/api/correos/**").hasAnyRole(CorreoPermisos.rolesParaSecurity())
+                        .requestMatchers("/api/usuarios/**").hasAnyRole(UsuarioPermisos.rolesParaSecurity())
+                        .requestMatchers("/api/clientes/**").hasAnyRole(ClientePermisos.rolesParaSecurity())
+                        .requestMatchers("/api/proveedores/**").hasAnyRole(ProveedorPermisos.rolesParaSecurity())
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class)

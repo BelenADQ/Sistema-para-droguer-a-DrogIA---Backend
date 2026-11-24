@@ -1,8 +1,8 @@
 package com.drogia;
 
-import com.drogia.entities.Correo;
-import com.drogia.entities.enums.EstadoCorreo;
-import com.drogia.repository.CorreoRepository;
+import com.drogia.modules.correos.entity.Correo;
+import com.drogia.modules.correos.entity.enums.EstadoCorreo;
+import com.drogia.modules.correos.repository.CorreoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
