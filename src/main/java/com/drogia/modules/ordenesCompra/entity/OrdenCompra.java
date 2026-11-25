@@ -53,6 +53,9 @@ public class OrdenCompra {
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
 
+    @Column(name = "fecha_limite_entrega")
+    private LocalDate fechaLimiteEntrega;
+
     @Column(name = "items_json", columnDefinition = "LONGTEXT")
     private String itemsJson;
 

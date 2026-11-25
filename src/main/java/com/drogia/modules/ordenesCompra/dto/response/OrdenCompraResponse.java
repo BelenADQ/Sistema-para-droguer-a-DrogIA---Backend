@@ -10,6 +10,7 @@ public record OrdenCompraResponse(
         String number,
         JsonNode supplier,
         String date,
+        String fechaLimiteEntrega,
         List<ItemResponse> items,
         BigDecimal subtotal,
         BigDecimal igv,

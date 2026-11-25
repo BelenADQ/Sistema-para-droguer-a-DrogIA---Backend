@@ -146,7 +146,7 @@ public class PedidoAlmacenService {
         return buscar(id);
     }
 
-    private JsonNode destinoDe(Long casoId) {
+    public JsonNode destinoDe(Long casoId) {
         if (casoId == null) {
             return destinoPorDefecto();
         }

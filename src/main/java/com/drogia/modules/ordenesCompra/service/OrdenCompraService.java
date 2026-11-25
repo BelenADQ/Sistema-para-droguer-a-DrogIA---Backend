@@ -91,6 +91,10 @@ public class OrdenCompraService {
                 : solicitudRepository.findById(solicitudIds.get(0))
                         .map(SolicitudCompra::getVentaId).orElse(null);
         Venta venta = ventaId == null ? null : ventaRepository.findById(ventaId).orElse(null);
+        LocalDate fecha = request.date() == null ? LocalDate.now() : request.date();
+        LocalDate fechaLimiteEntrega = request.fechaLimiteEntrega() == null
+                ? fecha.plusDays(7)
+                : request.fechaLimiteEntrega();
 
         OrdenCompra orden = OrdenCompra.builder()
                 .numero(generarNumero())
@@ -99,7 +103,8 @@ public class OrdenCompraService {
                 .casoId(request.casoId() != null ? request.casoId() : (venta == null ? null : venta.getCasoId()))
                 .ventaId(ventaId)
                 .ventaNumero(venta == null ? null : venta.getNumero())
-                .fecha(request.date() == null ? LocalDate.now() : request.date())
+                .fecha(fecha)
+                .fechaLimiteEntrega(fechaLimiteEntrega)
                 .itemsJson(JsonUtil.write(items))
                 .solicitudesJson(JsonUtil.write(solicitudIds))
                 .subtotal(subtotal)
@@ -208,9 +213,13 @@ public class OrdenCompraService {
                         item.productId(), item.product(), item.unit(), item.quantity(),
                         item.price(), item.subtotal()))
                 .toList();
+        LocalDate fechaLimite = orden.getFechaLimiteEntrega() != null
+                ? orden.getFechaLimiteEntrega()
+                : (orden.getFecha() == null ? null : orden.getFecha().plusDays(7));
         return new OrdenCompraResponse(
                 orden.getId(), orden.getNumero(), supplier(orden),
                 orden.getFecha() == null ? null : orden.getFecha().toString(),
+                fechaLimite == null ? null : fechaLimite.toString(),
                 items, orden.getSubtotal(), orden.getIgv(), orden.getTotal(),
                 orden.getEstado() == null ? null : orden.getEstado().label(),
                 JsonUtil.readList(orden.getSolicitudesJson(), Long.class),

@@ -1,7 +1,9 @@
 package com.drogia.modules.pedidosAlmacen.controller;
 
 import com.drogia.modules.pedidosAlmacen.dto.request.VerificacionPedidoRequest;
+import com.drogia.modules.pedidosAlmacen.dto.response.InventarioAlmacenResponse;
 import com.drogia.modules.pedidosAlmacen.dto.response.PedidoAlmacenResponse;
+import com.drogia.modules.pedidosAlmacen.service.InventarioAlmacenService;
 import com.drogia.modules.pedidosAlmacen.service.PedidoAlmacenService;
 import com.drogia.shared.dto.EstadoRequest;
 import jakarta.validation.Valid;
@@ -24,6 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PedidoAlmacenController {
 
     private final PedidoAlmacenService pedidoService;
+    private final InventarioAlmacenService inventarioAlmacenService;
+
+    @GetMapping("/inventario-pendiente")
+    public ResponseEntity<List<InventarioAlmacenResponse>> listarInventarioPendiente() {
+        return ResponseEntity.ok(inventarioAlmacenService.listarPendientes());
+    }
 
     @GetMapping
     public ResponseEntity<List<PedidoAlmacenResponse>> listar() {

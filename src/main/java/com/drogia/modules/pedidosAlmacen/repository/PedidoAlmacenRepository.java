@@ -11,5 +11,7 @@ public interface PedidoAlmacenRepository extends JpaRepository<PedidoAlmacen, Lo
 
     Optional<PedidoAlmacen> findByVentaId(Long ventaId);
 
+    Optional<PedidoAlmacen> findByOrdenCompraId(Long ordenCompraId);
+
     List<PedidoAlmacen> findAll(Sort sort);
 }

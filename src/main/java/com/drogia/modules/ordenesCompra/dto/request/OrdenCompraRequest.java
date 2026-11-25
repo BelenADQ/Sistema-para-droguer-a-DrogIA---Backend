@@ -10,6 +10,7 @@ public record OrdenCompraRequest(
         Long casoId,
         List<Long> solicitudIds,
         LocalDate date,
+        LocalDate fechaLimiteEntrega,
         List<ItemRequest> items,
         BigDecimal subtotal,
         BigDecimal igv,

@@ -11,4 +11,6 @@ public interface InventarioRepository extends JpaRepository<InventarioItem, Long
     List<InventarioItem> findAllByOrderByIdAsc();
 
     Optional<InventarioItem> findByProductAndLot(String product, String lot);
+
+    List<InventarioItem> findAllByPurchaseOrderCode(String purchaseOrderCode);
 }

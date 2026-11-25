@@ -65,6 +65,17 @@ public class InventarioService {
         return inventarioRepository.save(item);
     }
 
+    /** Deja en cero los lotes de una orden ya despachada; conserva el historial en BD. */
+    public void vaciarPorOrden(String purchaseOrderCode) {
+        if (purchaseOrderCode == null || purchaseOrderCode.isBlank()) {
+            return;
+        }
+        List<InventarioItem> items = inventarioRepository
+                .findAllByPurchaseOrderCode(purchaseOrderCode.trim());
+        items.forEach(item -> item.setStock(0));
+        inventarioRepository.saveAll(items);
+    }
+
     private InventarioItem buscar(Long id) {
         return inventarioRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Item de inventario no encontrado"));

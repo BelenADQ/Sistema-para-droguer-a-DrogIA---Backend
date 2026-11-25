@@ -7,6 +7,9 @@ import com.drogia.modules.despachos.dto.response.DespachoResponse;
 import com.drogia.modules.despachos.entity.Despacho;
 import com.drogia.modules.despachos.entity.enums.EstadoDespacho;
 import com.drogia.modules.despachos.repository.DespachoRepository;
+import com.drogia.modules.inventario.service.InventarioService;
+import com.drogia.modules.ordenesCompra.entity.OrdenCompra;
+import com.drogia.modules.ordenesCompra.repository.OrdenCompraRepository;
 import com.drogia.modules.pedidosAlmacen.entity.PedidoAlmacen;
 import com.drogia.modules.pedidosAlmacen.entity.enums.TipoDespacho;
 import com.drogia.modules.pedidosAlmacen.service.PedidoAlmacenService;
@@ -20,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 
 /** Servicio de despachos locales y por courier. */
 @Slf4j
@@ -32,6 +36,8 @@ public class DespachoService {
     private final PedidoAlmacenService pedidoService;
     private final VentaRepository ventaRepository;
     private final CasoService casoService;
+    private final InventarioService inventarioService;
+    private final OrdenCompraRepository ordenRepository;
 
     public List<DespachoResponse> listar() {
         return despachoRepository.findAllByOrderByIdDesc().stream()
@@ -45,15 +51,22 @@ public class DespachoService {
     public DespachoResponse crear(DespachoRequest request) {
         PedidoAlmacen pedido = request.pedidoId() == null ? null
                 : pedidoService.obtenerEntidad(request.pedidoId());
-        TipoDespacho tipo = pedido == null ? TipoDespacho.LOCAL : pedido.getTipoDespacho();
-        Venta venta = pedido == null ? null
-                : ventaRepository.findById(pedido.getVentaId()).orElse(null);
+        String codigoOrden = codigoOrdenDespacho(request, pedido);
+        OrdenCompra orden = codigoOrden == null ? null
+                : ordenRepository.findByNumero(codigoOrden).orElse(null);
+
+        Long ventaId = pedido != null ? pedido.getVentaId()
+                : (orden == null ? null : orden.getVentaId());
+        Long casoId = pedido != null ? pedido.getCasoId()
+                : (orden == null ? null : orden.getCasoId());
+        Venta venta = ventaId == null ? null : ventaRepository.findById(ventaId).orElse(null);
+        TipoDespacho tipo = tipoDespacho(pedido, orden);
 
         Despacho despacho = Despacho.builder()
                 .code(generarCodigo())
                 .pedidoId(request.pedidoId())
                 .ventaId(venta == null ? null : venta.getId())
-                .casoId(pedido == null ? null : pedido.getCasoId())
+                .casoId(casoId)
                 .tipoDespacho(tipo)
                 .thirdPartyName(tercerizador(request, tipo))
                 .thirdPartyDoc(request.thirdPartyDoc())
@@ -62,19 +75,24 @@ public class DespachoService {
                 .numeroGuia(request.numeroGuia())
                 .costoEnvio(request.costoEnvio())
                 .product(request.product())
-                .purchaseOrderCode(request.purchaseOrderCode())
+                .purchaseOrderCode(codigoOrden != null ? codigoOrden : request.purchaseOrderCode())
                 .quantity(request.quantity())
                 .date(request.date())
                 .status(EstadoDespacho.PROGRAMADO)
                 .fechaCreacion(LocalDateTime.now())
                 .build();
         despacho = despachoRepository.save(despacho);
+
         if (pedido != null) {
             pedidoService.vincularDespacho(pedido.getId(), despacho.getId());
+        }
+        inventarioService.vaciarPorOrden(codigoOrden);
+        if (venta != null) {
             venta.setEstado(EstadoVenta.EN_DESPACHO);
             ventaRepository.save(venta);
         }
-        log.info("Despacho {} creado tipo={}", despacho.getCode(), tipo);
+
+        log.info("Despacho {} creado tipo={} orden={}", despacho.getCode(), tipo, codigoOrden);
         return toResponse(despacho);
     }
 
@@ -96,6 +114,8 @@ public class DespachoService {
                     ventaRepository.save(venta);
                     casoService.marcarCerrado(venta.getCasoId());
                 }
+            } else if (despacho.getCasoId() != null) {
+                casoService.marcarCerrado(despacho.getCasoId());
             }
         }
         return toResponse(despachoRepository.save(despacho));
@@ -107,6 +127,35 @@ public class DespachoService {
         }
         if (tipo == TipoDespacho.COURIER && request.courierEmpresa() != null) {
             return request.courierEmpresa();
+        }
+        return null;
+    }
+
+    private TipoDespacho tipoDespacho(PedidoAlmacen pedido, OrdenCompra orden) {
+        if (pedido != null && pedido.getTipoDespacho() != null) {
+            return pedido.getTipoDespacho();
+        }
+        JsonNode destino = orden == null ? null : pedidoService.destinoDe(orden.getCasoId());
+        String departamento = destino == null ? "" : destino.path("departamento").asText("");
+        String provincia = destino == null ? "" : destino.path("provincia").asText("");
+        if ("Arequipa".equalsIgnoreCase(departamento)
+                && (provincia.isBlank() || "Arequipa".equalsIgnoreCase(provincia))) {
+            return TipoDespacho.LOCAL;
+        }
+        return TipoDespacho.COURIER;
+    }
+
+    private String codigoOrdenDespacho(DespachoRequest request, PedidoAlmacen pedido) {
+        if (pedido != null && pedido.getOrdenCompraId() != null) {
+            String numero = ordenRepository.findById(pedido.getOrdenCompraId())
+                    .map(OrdenCompra::getNumero)
+                    .orElse(null);
+            if (numero != null && !numero.isBlank()) {
+                return numero;
+            }
+        }
+        if (request.purchaseOrderCode() != null && !request.purchaseOrderCode().isBlank()) {
+            return request.purchaseOrderCode().trim();
         }
         return null;
     }
