@@ -31,4 +31,7 @@ public class Cliente {
 
     @Column(nullable = false, unique = true, length = 11)
     private String document;
+
+    @Column(length = 150)
+    private String email;
 }

@@ -1,9 +1,11 @@
 package com.drogia.modules.correos.service;
 
+import com.drogia.modules.casos.service.CasoService;
 import com.drogia.modules.correos.entity.Correo;
 import com.drogia.modules.correos.entity.Documento;
 import com.drogia.modules.correos.entity.enums.EstadoCorreo;
 import com.drogia.modules.correos.entity.enums.TipoCorreo;
+import com.drogia.modules.correos.entity.enums.TipoRespuesta;
 import com.drogia.exception.ApiException;
 import com.drogia.modules.correos.repository.CorreoRepository;
 import com.drogia.modules.correos.repository.DocumentoRepository;
@@ -31,6 +33,7 @@ public class ClasificacionCorreoService {
     private final DocumentoRepository documentoRepository;
     private final DocumentStorageService storageService;
     private final GeminiClassificationService geminiService;
+    private final CasoService casoService;
 
     @Transactional
     public boolean procesar(GmailImapService.CorreoLeido leido) {
@@ -74,7 +77,8 @@ public class ClasificacionCorreoService {
                 leido.asunto(), leido.cuerpoTexto(), leido.remitente(), adjuntosParaGemini);
         aplicarClasificacion(correo, clasificacion);
         correo.setClasificaciones((correo.getClasificaciones() == null ? 0 : correo.getClasificaciones()) + 1);
-        correoRepository.save(correo);
+        correo = correoRepository.save(correo);
+        casoService.sincronizar(correo);
         log.info("Correo clasificado messageId={} tipo={} estado={}",
                 leido.messageId(), correo.getTipoClasificacion(), correo.getEstado());
         return true;
@@ -113,7 +117,9 @@ public class ClasificacionCorreoService {
                 correo.getAsunto(), correo.getCuerpoTexto(), correo.getRemitente(), adjuntos);
         aplicarClasificacion(correo, clasificacion);
         correo.setClasificaciones((correo.getClasificaciones() == null ? 0 : correo.getClasificaciones()) + 1);
-        return correoRepository.save(correo);
+        correo = correoRepository.save(correo);
+        casoService.sincronizar(correo);
+        return correo;
     }
 
     private void aplicarClasificacion(Correo correo, GeminiClassification clasificacion) {
@@ -121,8 +127,31 @@ public class ClasificacionCorreoService {
         correo.setTipoClasificacion(tipo == null ? TipoCorreo.OTRO.name() : tipo.name());
         correo.setCodigoCotizacionDetectado(clasificacion.codigoCotizacionDetectado());
         correo.setResumenProductos(clasificacion.resumenProductos());
+        correo.setTipoRespuesta(clasificacion.tipoRespuesta() == null
+                ? TipoRespuesta.OTRO.name() : clasificacion.tipoRespuesta().name());
+        correo.setCodigoReferencia(clasificacion.codigoReferencia());
+        correo.setClienteExtraido(clasificacion.clienteJson());
+        correo.setProductosExtraidos(clasificacion.productosJson());
+        correo.setDestinoExtraido(clasificacion.destinoJson());
         correo.setProcesadoAt(LocalDateTime.now());
         correo.setErrorDetalle(null);
+
+        if (clasificacion.tipoRespuesta() == TipoRespuesta.NUEVA_SOLICITUD) {
+            correo.setEstado(EstadoCorreo.ANALIZADO);
+            correo.setArea("Ventas");
+            return;
+        }
+        if (clasificacion.tipoRespuesta() == TipoRespuesta.ORDEN_COMPRA) {
+            correo.setArea("Compras");
+            if (clasificacion.codigoReferencia() == null
+                    && clasificacion.codigoCotizacionDetectado() == null) {
+                correo.setEstado(EstadoCorreo.REVISION);
+                correo.setErrorDetalle("Orden de compra sin código de referencia detectado");
+            } else {
+                correo.setEstado(EstadoCorreo.ANALIZADO);
+            }
+            return;
+        }
 
         if (tipo == TipoCorreo.SOLICITUD_COTIZACION) {
             correo.setEstado(EstadoCorreo.ANALIZADO);

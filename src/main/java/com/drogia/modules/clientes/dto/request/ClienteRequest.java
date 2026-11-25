@@ -7,5 +7,6 @@ import jakarta.validation.constraints.Pattern;
 public record ClienteRequest(
         @NotBlank(message = "el nombre es obligatorio") String name,
         @NotBlank(message = "el documento es obligatorio")
-        @Pattern(regexp = "\\d{11}", message = "el documento debe tener 11 dígitos") String document) {
+        @Pattern(regexp = "\\d{11}", message = "el documento debe tener 11 dígitos") String document,
+        String email) {
 }

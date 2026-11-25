@@ -38,6 +38,7 @@ public class ClienteService {
         Cliente cliente = Cliente.builder()
                 .name(request.name().trim())
                 .document(document)
+                .email(request.email() == null ? null : request.email().trim())
                 .build();
         return toResponse(clienteRepository.save(cliente));
     }
@@ -48,6 +49,7 @@ public class ClienteService {
         String document = validarDocumento(request.document(), id);
         cliente.setName(request.name().trim());
         cliente.setDocument(document);
+        cliente.setEmail(request.email() == null ? null : request.email().trim());
         return toResponse(clienteRepository.save(cliente));
     }
 
@@ -78,6 +80,6 @@ public class ClienteService {
     }
 
     private ClienteResponse toResponse(Cliente cliente) {
-        return new ClienteResponse(cliente.getId(), cliente.getName(), cliente.getDocument());
+        return new ClienteResponse(cliente.getId(), cliente.getName(), cliente.getDocument(), cliente.getEmail());
     }
 }

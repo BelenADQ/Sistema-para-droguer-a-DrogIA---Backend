@@ -43,6 +43,12 @@ public class CorreoController {
         return ResponseEntity.ok(correoService.historial(areaDelRol(authentication)));
     }
 
+    /** Devuelve un correo persistido por identificador. */
+    @GetMapping("/{id}")
+    public ResponseEntity<CorreoResponse> obtener(@PathVariable Long id) {
+        return ResponseEntity.ok(correoService.obtener(id));
+    }
+
     /** Actualiza estado (y opcionalmente área) de un correo persistido. */
     @PatchMapping("/{id}")
     public ResponseEntity<CorreoResponse> actualizarEstado(

@@ -68,4 +68,22 @@ public class Correo {
 
     @Column(name = "clasificaciones")
     private Integer clasificaciones;
+
+    @Column(name = "caso_id")
+    private Long casoId;
+
+    @Column(name = "tipo_respuesta", length = 30)
+    private String tipoRespuesta;
+
+    @Column(name = "codigo_referencia", length = 40)
+    private String codigoReferencia;
+
+    @Column(name = "cliente_extraido", columnDefinition = "LONGTEXT")
+    private String clienteExtraido;
+
+    @Column(name = "productos_extraidos", columnDefinition = "LONGTEXT")
+    private String productosExtraidos;
+
+    @Column(name = "destino_extraido", columnDefinition = "LONGTEXT")
+    private String destinoExtraido;
 }

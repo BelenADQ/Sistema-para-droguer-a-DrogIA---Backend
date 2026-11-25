@@ -1,5 +1,6 @@
 package com.drogia.modules.correos.service;
 
+import com.drogia.modules.casos.service.CasoService;
 import com.drogia.modules.correos.dto.response.CorreoResponse;
 import com.drogia.modules.correos.entity.Correo;
 import com.drogia.modules.correos.entity.enums.EstadoCorreo;
@@ -10,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.drogia.exception.ApiException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
@@ -27,6 +30,8 @@ public class CorreoService {
     private final CorreoRepository correoRepository;
     private final ClasificacionCorreoService clasificacionCorreoService;
     private final IngestaProgramadaService ingestaProgramadaService;
+    private final CasoService casoService;
+    private final ObjectMapper objectMapper;
 
     /** Lista las carpetas disponibles en la cuenta de Gmail. */
     public List<String> carpetas() {
@@ -88,13 +93,21 @@ public class CorreoService {
         return historial;
     }
 
+    /** Devuelve un correo persistido por identificador. */
+    public CorreoResponse obtener(Long id) {
+        Correo correo = correoRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Correo no encontrado: " + id));
+        return toResponse(correo);
+    }
+
     /** Actualiza el estado y el área de un correo. */
     public CorreoResponse actualizarEstado(Long id, EstadoCorreo estado, String area) {
         Correo correo = correoRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Correo no encontrado: " + id));
         correo.setEstado(estado);
         if (area != null && !area.isBlank()) correo.setArea(area);
-        correoRepository.save(correo);
+        correo = correoRepository.save(correo);
+        casoService.sincronizarEstadoCorreo(correo);
         log.info("PATCH correo id={} estado={} area={}", id, estado, area);
         return toResponse(correo);
     }
@@ -118,8 +131,28 @@ public class CorreoService {
                 .area(c.getArea())
                 .status(c.getEstado() == null ? null : c.getEstado().label())
                 .tipoClasificacion(c.getTipoClasificacion())
+                .tipoRespuesta(c.getTipoRespuesta())
                 .codigoCotizacionDetectado(c.getCodigoCotizacionDetectado())
+                .codigoReferencia(c.getCodigoReferencia())
                 .resumenProductos(c.getResumenProductos())
+                .casoId(c.getCasoId())
+                .cuerpoTexto(c.getCuerpoTexto())
+                .errorDetalle(c.getErrorDetalle())
+                .cliente(leerJson(c.getClienteExtraido()))
+                .productos(leerJson(c.getProductosExtraidos()))
+                .destino(leerJson(c.getDestinoExtraido()))
                 .build();
+    }
+
+    private JsonNode leerJson(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(valor);
+        } catch (Exception ex) {
+            log.warn("No se pudo interpretar JSON extraído del correo: {}", ex.getMessage());
+            return null;
+        }
     }
 }

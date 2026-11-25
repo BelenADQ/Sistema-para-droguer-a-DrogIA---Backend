@@ -1,7 +1,7 @@
 package com.drogia.modules.correos.service.gemini;
 
 import com.drogia.modules.correos.entity.enums.TipoCorreo;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 

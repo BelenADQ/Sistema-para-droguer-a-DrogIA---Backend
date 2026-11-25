@@ -2,11 +2,14 @@ package com.drogia.config;
 
 import com.drogia.modules.clientes.entity.Cliente;
 import com.drogia.modules.clientes.repository.ClienteRepository;
+import com.drogia.modules.productos.entity.Producto;
+import com.drogia.modules.productos.repository.ProductoRepository;
 import com.drogia.modules.proveedores.entity.Proveedor;
 import com.drogia.modules.proveedores.repository.ProveedorRepository;
 import com.drogia.modules.usuarios.entity.User;
 import com.drogia.modules.usuarios.repository.UserRepository;
 import com.drogia.shared.enums.Rol;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +25,7 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ClienteRepository clienteRepository;
     private final ProveedorRepository proveedorRepository;
+    private final ProductoRepository productoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -29,6 +33,7 @@ public class DataSeeder implements CommandLineRunner {
         seedUsuarios();
         seedClientes();
         seedProveedores();
+        seedProductos();
     }
 
     private void seedUsuarios() {
@@ -64,12 +69,25 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedClientes() {
-        if (clienteRepository.count() > 0) {
+        crearCliente("Rodríguez S.A.C.", "20123456789", "compras@rodriguez.com");
+        crearCliente("Distribuidora Salud Perú", "20456789123", "pedidos@saludperu.com");
+        crearCliente("Farmacias del Sur", "20678912345", "contacto@farmaciasdelsur.com");
+    }
+
+    private void crearCliente(String nombre, String documento, String email) {
+        Cliente cliente = clienteRepository.findByDocument(documento).orElse(null);
+        if (cliente == null) {
+            clienteRepository.save(Cliente.builder()
+                    .name(nombre)
+                    .document(documento)
+                    .email(email)
+                    .build());
             return;
         }
-        clienteRepository.save(Cliente.builder().name("Rodríguez S.A.C.").document("20123456789").build());
-        clienteRepository.save(Cliente.builder().name("Distribuidora Salud Perú").document("20456789123").build());
-        clienteRepository.save(Cliente.builder().name("Farmacias del Sur").document("20678912345").build());
+        if (cliente.getEmail() == null || cliente.getEmail().isBlank()) {
+            cliente.setEmail(email);
+            clienteRepository.save(cliente);
+        }
     }
 
     private void seedProveedores() {
@@ -93,6 +111,35 @@ public class DataSeeder implements CommandLineRunner {
                 .document("20678912345")
                 .phone("945789123")
                 .email("contacto@farmaandinos.com")
+                .build());
+    }
+
+    private void seedProductos() {
+        if (productoRepository.count() > 0) {
+            return;
+        }
+        crearProducto("Paracetamol 500 mg", "CAJA", "LOT-PAR-001", "RS-001-2026",
+                new BigDecimal("12.50"), 120, "2027-08-15");
+        crearProducto("Ibuprofeno 400 mg", "CAJA", "LOT-IBU-001", "RS-002-2026",
+                new BigDecimal("15.80"), 80, "2027-09-20");
+        crearProducto("Amoxicilina 500 mg", "CAJA", "LOT-AMO-001", "RS-003-2026",
+                new BigDecimal("22.40"), 60, "2027-10-10");
+        crearProducto("Suero fisiológico 0.9% 500 ml", "UNIDAD", "LOT-SUE-001", "RS-004-2026",
+                new BigDecimal("8.90"), 200, "2028-01-30");
+        crearProducto("Vitamina C 1 g", "CAJA", "LOT-VIT-001", "RS-005-2026",
+                new BigDecimal("10.20"), 150, "2027-11-25");
+    }
+
+    private void crearProducto(String nombre, String unidad, String lote,
+            String registroSanitario, BigDecimal precio, Integer stock, String vencimiento) {
+        productoRepository.save(Producto.builder()
+                .name(nombre)
+                .unit(unidad)
+                .lot(lote)
+                .healthRegistration(registroSanitario)
+                .price(precio)
+                .stock(stock)
+                .expiration(vencimiento)
                 .build());
     }
 }

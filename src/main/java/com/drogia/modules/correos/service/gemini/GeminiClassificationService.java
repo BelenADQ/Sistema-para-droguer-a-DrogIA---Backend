@@ -1,8 +1,9 @@
 package com.drogia.modules.correos.service.gemini;
 
 import com.drogia.modules.correos.entity.enums.TipoCorreo;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.drogia.modules.correos.entity.enums.TipoRespuesta;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,8 @@ import java.util.regex.Pattern;
 public class GeminiClassificationService {
 
     private static final Set<String> GEMINI_MIME = Set.of("application/pdf", "image/jpeg", "image/png", "image/webp");
-    private static final Pattern COT_PATTERN = Pattern.compile("COT-\\d{4}-\\d{4}", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CODIGO_PATTERN =
+            Pattern.compile("(?:COT|SOL)-[0-9A-Z]+(?:-[0-9A-Z]+)*", Pattern.CASE_INSENSITIVE);
 
     private final ObjectMapper objectMapper;
     private final String apiKey;
@@ -87,10 +89,19 @@ public class GeminiClassificationService {
 
     private Map<String, Object> buildPayload(String asunto, String cuerpo, String remitente, List<Attachment> attachments) throws Exception {
         List<Map<String, Object>> parts = new ArrayList<>();
-        String prompt = "Clasifica el correo corporativo y responde SOLO JSON válido con este esquema exacto: " +
-                "{\"tipo_correo\":\"SOLICITUD_COTIZACION|ORDEN_COMPRA|OTRO\",\"codigo_cotizacion_detectado\":\"COT-2026-0045 o null\",\"resumen_productos\":\"...\"}. " +
-                "Si es ORDEN_COMPRA detecta el código COT-YYYY-NNNN en asunto/cuerpo/adjuntos visibles. Si no existe usa null. " +
-                "Si es spam, boletín o ambiguo usa OTRO. No incluyas markdown ni texto adicional.\n\n" +
+        String prompt = "Analiza el correo corporativo de una droguería y responde SOLO JSON válido con este esquema exacto: " +
+                "{\"tipo_correo\":\"SOLICITUD_COTIZACION|ORDEN_COMPRA|OTRO\"," +
+                "\"tipo_respuesta\":\"NUEVA_SOLICITUD|ORDEN_COMPRA|OTRO\"," +
+                "\"codigo_cotizacion_detectado\":\"COT-2026-0045 o null\"," +
+                "\"codigo_referencia\":\"COT-2026-0045 o SOL-2026-0001 o null\"," +
+                "\"cliente\":{\"nombre\":\"...\",\"documento\":\"...\",\"email\":\"...\"}," +
+                "\"productos\":[{\"nombre\":\"Paracetamol 500 mg\",\"cantidad\":20,\"unidad\":\"CAJA\",\"registro_sanitario\":\"RSA-12345\",\"lote\":\"LOT-001\"}]," +
+                "\"destino\":{\"departamento\":\"Arequipa\",\"provincia\":\"Arequipa\",\"direccion\":\"...\"}," +
+                "\"resumen_productos\":\"...\"}. " +
+                "Si el correo es respuesta a una cotización y contiene una orden de compra, usa tipo_correo=ORDEN_COMPRA y tipo_respuesta=ORDEN_COMPRA. " +
+                "Si es una solicitud nueva, usa tipo_correo=SOLICITUD_COTIZACION y tipo_respuesta=NUEVA_SOLICITUD. " +
+                "Extrae cliente, productos y destino desde el texto o adjuntos visibles. Si un dato no aparece usa null. " +
+                "Si es spam, boletín o ambiguo usa OTRO en ambos campos. No incluyas markdown ni texto adicional.\n\n" +
                 "METADATOS\nRemitente: " + safe(remitente) + "\nAsunto: " + safe(asunto) + "\nCuerpo:\n" + safe(cuerpo);
         parts.add(Map.of("text", prompt));
         if (attachments != null) {
@@ -139,30 +150,67 @@ public class GeminiClassificationService {
             case "ORDEN_COMPRA" -> TipoCorreo.ORDEN_COMPRA;
             default -> TipoCorreo.OTRO;
         };
-        String codigo = node.path("codigo_cotizacion_detectado").isNull() ? null : node.path("codigo_cotizacion_detectado").asText(null);
-        if (codigo != null) {
-            codigo = codigo.trim();
-            if (codigo.isBlank() || "null".equalsIgnoreCase(codigo)) {
-                codigo = null;
-            }
-            if (codigo != null) {
-                var matcher = COT_PATTERN.matcher(codigo);
-                codigo = matcher.find() ? matcher.group().toUpperCase() : null;
-            }
+        TipoRespuesta tipoRespuesta = TipoRespuesta.from(node.path("tipo_respuesta").asText(null));
+        if (tipoRespuesta == TipoRespuesta.OTRO) {
+            tipoRespuesta = switch (tipoCorreo) {
+                case SOLICITUD_COTIZACION -> TipoRespuesta.NUEVA_SOLICITUD;
+                case ORDEN_COMPRA -> TipoRespuesta.ORDEN_COMPRA;
+                default -> TipoRespuesta.OTRO;
+            };
         }
+
+        String codigo = extraerCodigo(node.path("codigo_cotizacion_detectado"));
+        String referencia = extraerCodigo(node.path("codigo_referencia"));
+        if (referencia == null) {
+            referencia = codigo;
+        }
+
+        String clienteJson = node.has("cliente") && !node.path("cliente").isNull()
+                ? node.path("cliente").toString()
+                : null;
+        String productosJson = node.has("productos") && node.path("productos").isArray()
+                ? node.path("productos").toString()
+                : null;
+        String destinoJson = node.has("destino") && !node.path("destino").isNull()
+                ? node.path("destino").toString()
+                : null;
+
         String resumen = node.path("resumen_productos").asText("");
         if (resumen != null && resumen.length() > 2000) {
             resumen = resumen.substring(0, 2000);
         }
-        return new GeminiClassification(tipoCorreo, codigo, resumen, json);
+        return new GeminiClassification(tipoCorreo, tipoRespuesta, codigo, referencia,
+                clienteJson, productosJson, destinoJson, resumen, json);
+    }
+
+    private String extraerCodigo(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        String valor = node.asText(null);
+        if (valor == null) {
+            return null;
+        }
+        valor = valor.trim();
+        if (valor.isBlank() || "null".equalsIgnoreCase(valor)) {
+            return null;
+        }
+        var matcher = CODIGO_PATTERN.matcher(valor);
+        return matcher.find() ? matcher.group().toUpperCase() : null;
     }
 
     private GeminiClassification fallback(String asunto, String cuerpo, String reason) {
         String text = (safe(asunto) + "\n" + safe(cuerpo)).toUpperCase();
-        var matcher = COT_PATTERN.matcher(text);
+        var matcher = CODIGO_PATTERN.matcher(text);
         String codigo = matcher.find() ? matcher.group().toUpperCase() : null;
-        TipoCorreo tipo = codigo != null && text.contains("ORDEN") ? TipoCorreo.ORDEN_COMPRA : TipoCorreo.OTRO;
-        return new GeminiClassification(tipo, codigo, "Clasificación manual requerida: " + reason, null);
+        TipoCorreo tipo = codigo != null && text.contains("ORDEN")
+                ? TipoCorreo.ORDEN_COMPRA
+                : (text.contains("COTIZ") || text.contains("SOLICIT") ? TipoCorreo.SOLICITUD_COTIZACION : TipoCorreo.OTRO);
+        TipoRespuesta respuesta = tipo == TipoCorreo.ORDEN_COMPRA
+                ? TipoRespuesta.ORDEN_COMPRA
+                : (tipo == TipoCorreo.SOLICITUD_COTIZACION ? TipoRespuesta.NUEVA_SOLICITUD : TipoRespuesta.OTRO);
+        return new GeminiClassification(tipo, respuesta, codigo, codigo, null, null, null,
+                "Clasificación manual requerida: " + reason, null);
     }
 
     private String safe(String value) {

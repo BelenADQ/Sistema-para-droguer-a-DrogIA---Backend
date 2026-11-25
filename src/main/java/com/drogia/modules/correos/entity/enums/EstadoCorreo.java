@@ -8,7 +8,7 @@ public enum EstadoCorreo {
     ANALIZADO,
     REVISION;
 
-    @JsonCreator
+    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
     public static EstadoCorreo from(String value) {
         if (value == null) {
             return null;
