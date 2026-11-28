@@ -40,13 +40,13 @@ public class PedidoAlmacen {
     @Column(name = "caso_id")
     private Long casoId;
 
-    @Column(name = "cliente_json", columnDefinition = "LONGTEXT")
+    @Column(name = "cliente_json", columnDefinition = "TEXT")
     private String clienteJson;
 
-    @Column(name = "productos_json", columnDefinition = "LONGTEXT")
+    @Column(name = "productos_json", columnDefinition = "TEXT")
     private String productosJson;
 
-    @Column(name = "destino_json", columnDefinition = "LONGTEXT")
+    @Column(name = "destino_json", columnDefinition = "TEXT")
     private String destinoJson;
 
     @Enumerated(EnumType.STRING)

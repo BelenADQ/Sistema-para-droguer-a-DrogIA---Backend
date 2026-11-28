@@ -8,7 +8,7 @@ import java.util.List;
 public final class CasoPermisos {
 
     private static final List<Rol> ROLES_PERMITIDOS =
-            List.of(Rol.ADMINISTRACION, Rol.VENTAS, Rol.COMPRAS);
+            List.of(Rol.ADMINISTRACION, Rol.VENTAS, Rol.COMPRAS, Rol.ALMACEN);
 
     private CasoPermisos() {
     }

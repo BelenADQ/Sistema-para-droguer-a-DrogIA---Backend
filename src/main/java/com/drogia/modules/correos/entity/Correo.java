@@ -48,7 +48,7 @@ public class Correo {
 
     private LocalDateTime fechaGuardado;
 
-    @Column(name = "cuerpo_texto", columnDefinition = "LONGTEXT")
+    @Column(name = "cuerpo_texto", columnDefinition = "TEXT")
     private String cuerpoTexto;
 
     @Column(name = "tipo_clasificacion", length = 40)
@@ -78,12 +78,12 @@ public class Correo {
     @Column(name = "codigo_referencia", length = 40)
     private String codigoReferencia;
 
-    @Column(name = "cliente_extraido", columnDefinition = "LONGTEXT")
+    @Column(name = "cliente_extraido", columnDefinition = "TEXT")
     private String clienteExtraido;
 
-    @Column(name = "productos_extraidos", columnDefinition = "LONGTEXT")
+    @Column(name = "productos_extraidos", columnDefinition = "TEXT")
     private String productosExtraidos;
 
-    @Column(name = "destino_extraido", columnDefinition = "LONGTEXT")
+    @Column(name = "destino_extraido", columnDefinition = "TEXT")
     private String destinoExtraido;
 }

@@ -7,7 +7,7 @@ import java.util.List;
 public final class ProveedorPermisos {
 
     private static final List<Rol> ROLES_PERMITIDOS =
-            List.of(Rol.ADMINISTRACION, Rol.COMPRAS);
+            List.of(Rol.ADMINISTRACION, Rol.COMPRAS, Rol.ALMACEN);
 
     private ProveedorPermisos() {
     }

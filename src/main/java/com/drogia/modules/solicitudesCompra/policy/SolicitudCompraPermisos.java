@@ -7,7 +7,7 @@ import java.util.List;
 public final class SolicitudCompraPermisos {
 
     private static final List<Rol> LECTURA =
-            List.of(Rol.ADMINISTRACION, Rol.VENTAS, Rol.COMPRAS);
+            List.of(Rol.ADMINISTRACION, Rol.VENTAS, Rol.COMPRAS, Rol.ALMACEN);
     private static final List<Rol> ESCRITURA = List.of(Rol.COMPRAS);
 
     private SolicitudCompraPermisos() {

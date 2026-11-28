@@ -73,13 +73,13 @@ public class Cotizacion {
     @Column(name = "items_json", columnDefinition = "TEXT")
     private String itemsJson;
 
-    @Column(name = "cliente_json", columnDefinition = "LONGTEXT")
+    @Column(name = "cliente_json", columnDefinition = "TEXT")
     private String clienteJson;
 
-    @Column(name = "destino_json", columnDefinition = "LONGTEXT")
+    @Column(name = "destino_json", columnDefinition = "TEXT")
     private String destinoJson;
 
-    @Column(name = "proveedores_json", columnDefinition = "LONGTEXT")
+    @Column(name = "proveedores_json", columnDefinition = "TEXT")
     private String proveedoresJson;
 
     @Column(name = "codigo_solicitud", length = 40)

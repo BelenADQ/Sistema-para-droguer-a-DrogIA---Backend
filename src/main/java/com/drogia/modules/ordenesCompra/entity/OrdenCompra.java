@@ -56,10 +56,10 @@ public class OrdenCompra {
     @Column(name = "fecha_limite_entrega")
     private LocalDate fechaLimiteEntrega;
 
-    @Column(name = "items_json", columnDefinition = "LONGTEXT")
+    @Column(name = "items_json", columnDefinition = "TEXT")
     private String itemsJson;
 
-    @Column(name = "solicitudes_json", columnDefinition = "LONGTEXT")
+    @Column(name = "solicitudes_json", columnDefinition = "TEXT")
     private String solicitudesJson;
 
     @Column(name = "subtotal")

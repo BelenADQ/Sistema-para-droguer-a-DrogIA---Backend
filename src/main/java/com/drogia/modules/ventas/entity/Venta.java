@@ -47,13 +47,13 @@ public class Venta {
     @Column(name = "cliente_id")
     private Long clienteId;
 
-    @Column(name = "cliente_json", columnDefinition = "LONGTEXT")
+    @Column(name = "cliente_json", columnDefinition = "TEXT")
     private String clienteJson;
 
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
 
-    @Column(name = "items_json", columnDefinition = "LONGTEXT")
+    @Column(name = "items_json", columnDefinition = "TEXT")
     private String itemsJson;
 
     @Column(name = "subtotal")
